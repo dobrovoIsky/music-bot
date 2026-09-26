@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
+from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database import AsyncSessionLocal
@@ -8,8 +9,20 @@ from models import User, Song, QueueItem, QueueStatus, Settings
 from sqlalchemy import select, func, and_
 from youtube_search import search_song
 import json
+import logging
+import os
+from html import escape
 
 router = Router()
+logger = logging.getLogger(__name__)
+
+def owner_chat_id():
+    value = os.getenv("OWNER_TELEGRAM_ID", "").strip()
+    try:
+        return int(value) if value else None
+    except ValueError:
+        logger.error("OWNER_TELEGRAM_ID must be a numeric Telegram user ID")
+        return None
 
 class SearchState(StatesGroup):
     waiting_for_query = State()
@@ -49,6 +62,13 @@ async def cmd_start(message: Message, state: FSMContext):
         "Привіт! Ви можете додати музику в чергу водія."
     )
     await message.answer(text, reply_markup=get_main_keyboard(), parse_mode="HTML")
+
+@router.message(Command("myid"))
+async def cmd_myid(message: Message):
+    if message.chat.type != "private":
+        await message.answer("Напишіть /myid боту в особистих повідомленнях.")
+        return
+    await message.answer(f"Ваш Telegram ID: {message.from_user.id}")
 
 @router.callback_query(F.data == "find_song")
 async def process_find_song(callback: CallbackQuery, state: FSMContext):
@@ -198,6 +218,28 @@ async def add_to_queue(callback: CallbackQuery, state: FSMContext):
         f"Позиція: #{position}\n"
         f"Перед вами: {position - 1} пісень."
     )
+    owner_id = owner_chat_id()
+    if owner_id:
+        video_id = selected_song["youtube_id"]
+        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        notification = (
+            "🎵 <b>Нова пісня в черзі</b>\n\n"
+            f"{escape(selected_song['artist'])} — {escape(selected_song['title'])}\n"
+            f"Позиція: #{position}\n"
+            f"Посилання: {youtube_url}"
+        )
+        try:
+            await callback.bot.send_message(
+                chat_id=owner_id,
+                text=notification,
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="▶️ Відкрити в YouTube", url=youtube_url)]
+                ]),
+            )
+        except TelegramAPIError:
+            logger.exception("Could not notify the owner about queue item %s", queue_item.id)
+
     await callback.message.edit_text(text, reply_markup=get_main_keyboard(), parse_mode="HTML")
 
 
