@@ -28,6 +28,7 @@ let player = null;
 let isPlayerReady = false;
 let playbackStarted = false;
 let wakeLock = null;
+let latestQueue = null;
 
 // ====== Wake Lock (keep screen on) ======
 async function requestWakeLock() {
@@ -73,11 +74,38 @@ window.onYouTubeIframeAPIReady = function() {
             playsinline: 1
         },
         events: {
-            onReady: () => { isPlayerReady = true; },
-            onStateChange: onPlayerStateChange
+            onReady: () => {
+                isPlayerReady = true;
+                syncPlayback();
+            },
+            onStateChange: onPlayerStateChange,
+            onError: (event) => {
+                const details = {
+                    2: 'Некоректний ID відео.',
+                    5: 'Це відео не підтримує відтворення в браузері.',
+                    100: 'Відео видалене або приватне.',
+                    101: 'Автор заборонив відтворення на інших сайтах.',
+                    150: 'Автор заборонив відтворення на інших сайтах.',
+                    153: 'YouTube не отримав дані про сайт. Перевірте налаштування Referer.'
+                };
+                els.trackArtist.textContent = `Помилка YouTube ${event.data}: ${details[event.data] || 'Не вдалося відтворити відео.'}`;
+                console.error('YouTube player error:', event.data);
+            }
         }
     });
 };
+
+function syncPlayback() {
+    if (!isPlayerReady || !playbackStarted || !latestQueue) return;
+    const videoId = latestQueue.playing?.song.youtube_id;
+    if (videoId && videoId !== currentYTId) {
+        player.loadVideoById(videoId);
+        currentYTId = videoId;
+    } else if (!videoId && currentYTId) {
+        player.stopVideo();
+        currentYTId = null;
+    }
+}
 
 function onPlayerStateChange(event) {
     // YT.PlayerState.ENDED === 0
@@ -93,10 +121,12 @@ els.startOverlay.addEventListener('click', async () => {
     els.startOverlay.classList.add('hidden');
     els.ytWrapper.classList.remove('hidden');
 
-    // Trigger first song to play
-    await apiCall('/api/next');
-    // Fetch immediately to get the new PLAYING state
+    // Resume the current track; advance only when nothing is playing yet.
     await fetchQueue();
+    if (!latestQueue?.playing && latestQueue?.queue?.length) {
+        await apiCall('/api/next');
+    }
+    syncPlayback();
 });
 
 // ====== API ======
@@ -114,12 +144,14 @@ async function fetchQueue() {
         const res = await fetch('/api/queue');
         if (!res.ok) throw new Error();
         const data = await res.json();
+        latestQueue = data;
         
         const str = JSON.stringify(data);
         if (str !== lastData) {
             updateUI(data);
             lastData = str;
         }
+        syncPlayback();
 
         els.statusBadge.classList.remove('offline');
         els.statusText.textContent = 'Онлайн';
@@ -162,25 +194,12 @@ function updateUI(data) {
             els.trackCoverPlaceholder.classList.remove('hidden');
         }
 
-        // Play in YouTube if new song
-        if (s.youtube_id && s.youtube_id !== currentYTId) {
-            currentYTId = s.youtube_id;
-            if (isPlayerReady && playbackStarted) {
-                player.loadVideoById(s.youtube_id);
-            }
-        }
     } else {
         els.trackTitle.textContent = 'Очікування...';
         els.trackArtist.textContent = 'Додайте пісню через бота';
         els.trackCover.classList.add('hidden');
         els.trackCoverPlaceholder.classList.remove('hidden');
         
-        if (currentYTId) {
-            currentYTId = null;
-            if (isPlayerReady && playbackStarted) {
-                player.stopVideo();
-            }
-        }
     }
 
     // Queue
@@ -219,8 +238,6 @@ function updateUI(data) {
 els.btnNext.addEventListener('click', () => apiCall('/api/next'));
 els.btnClear.addEventListener('click', () => {
     apiCall('/api/clear');
-    if (isPlayerReady && playbackStarted) player.stopVideo();
-    currentYTId = null;
 });
 els.toggleBtn.addEventListener('click', () => apiCall('/api/toggle_accepting'));
 
