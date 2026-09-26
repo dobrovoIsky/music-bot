@@ -3,7 +3,8 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from database import AsyncSessionLocal, User, Song, QueueItem, QueueStatus, Settings
+from database import AsyncSessionLocal
+from models import User, Song, QueueItem, QueueStatus, Settings
 from sqlalchemy import select, func, and_
 from itunes import search_song
 import json
