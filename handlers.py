@@ -45,7 +45,7 @@ async def cmd_start(message: Message, state: FSMContext):
         await get_or_create_user(session, message.from_user.id, message.from_user.full_name)
         
     text = (
-        "🎵 <b>TAXI MUSIC</b>\n\n"
+        "🎵 <b>SONATA</b>\n\n"
         "Привіт! Ви можете додати музику в чергу водія."
     )
     await message.answer(text, reply_markup=get_main_keyboard(), parse_mode="HTML")
@@ -79,7 +79,7 @@ async def process_find_song(callback: CallbackQuery, state: FSMContext):
 async def cancel_search(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     text = (
-        "🎵 <b>TAXI MUSIC</b>\n\n"
+        "🎵 <b>SONATA</b>\n\n"
         "Привіт! Ви можете додати музику в чергу водія."
     )
     await callback.message.edit_text(text, reply_markup=get_main_keyboard(), parse_mode="HTML")
@@ -279,7 +279,7 @@ async def process_remove_song(callback: CallbackQuery):
             
         # Back to main
         text = (
-            "🎵 <b>TAXI MUSIC</b>\n\n"
+            "🎵 <b>SONATA</b>\n\n"
             "Привіт! Ви можете додати музику в чергу водія."
         )
         await callback.message.edit_text(text, reply_markup=get_main_keyboard(), parse_mode="HTML")
