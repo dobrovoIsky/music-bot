@@ -14,7 +14,7 @@ class SongSchema(BaseModel):
     title: str
     artist: str
     cover_url: Optional[str]
-    itunes_id: Optional[str]
+    youtube_id: Optional[str]
 
 class QueueItemSchema(BaseModel):
     id: int
@@ -69,7 +69,7 @@ async def get_queue(session: AsyncSession = Depends(get_session)):
                 "title": item.song.title,
                 "artist": item.song.artist,
                 "cover_url": item.song.cover_url,
-                "itunes_id": item.song.itunes_id
+                "youtube_id": item.song.youtube_id
             }
         }
         

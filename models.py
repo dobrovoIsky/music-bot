@@ -28,7 +28,7 @@ class Song(Base):
     title = Column(String, nullable=False)
     artist = Column(String, nullable=False)
     cover_url = Column(String, nullable=True)
-    itunes_id = Column(String, nullable=True)
+    youtube_id = Column(String, nullable=True)
     
     queues = relationship("QueueItem", back_populates="song")
 
