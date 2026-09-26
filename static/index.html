@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Music — Driver Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <div class="logo">
+                <span class="emoji">🚕</span>
+                <h1>TAXI MUSIC</h1>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="indicator" id="system-status"></span>
+                    <span id="status-text">Система работает</span>
+                </div>
+                <div class="status-item">
+                    <span class="emoji">👥</span>
+                    <span id="users-count">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="emoji">🎵</span>
+                    <span id="songs-count">0</span>
+                </div>
+                <button id="toggle-accepting" class="toggle-btn">
+                    ВЫКЛЮЧИТЬ ПРИЕМ
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Now Playing Section -->
+            <section class="now-playing glass-panel glow">
+                <h2>СЕЙЧАС ИГРАЕТ</h2>
+                <div class="player-content" id="now-playing-content">
+                    <div class="cover-placeholder animate-pulse"></div>
+                    <div class="track-info">
+                        <h3 class="title placeholder-text w-3/4"></h3>
+                        <p class="artist placeholder-text w-1/2"></p>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-primary" id="btn-next">
+                        <span class="emoji">⏭️</span> СЛЕДУЮЩАЯ
+                    </button>
+                </div>
+            </section>
+
+            <!-- Queue Section -->
+            <section class="queue-section glass-panel">
+                <div class="queue-header">
+                    <h2>ОЧЕРЕДЬ</h2>
+                    <button class="btn btn-danger btn-sm" id="btn-clear">ОЧИСТИТЬ</button>
+                </div>
+                <div class="queue-list" id="queue-list">
+                    <!-- Queue items injected here via JS -->
+                    <p class="empty-state">Очередь пуста</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
