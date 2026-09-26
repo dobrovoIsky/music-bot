@@ -1,72 +1,133 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Taxi Music — Driver Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Taxi Music Sonata — Панель Водія</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
     <div class="app-container">
         <!-- Header -->
-        <header class="glass-panel">
-            <div class="logo">
-                <span class="emoji">🚕</span>
-                <h1>TAXI MUSIC</h1>
+        <header class="glass-panel header-panel">
+            <div class="header-top">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <span>🎵</span>
+                    </div>
+                    <div class="logo-text">
+                        <h1>SONATA</h1>
+                        <span class="logo-sub">TAXI MUSIC</span>
+                    </div>
+                </div>
+                <div class="status-badge" id="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Онлайн</span>
+                </div>
             </div>
-            <div class="status-bar">
-                <div class="status-item">
-                    <span class="indicator" id="system-status"></span>
-                    <span id="status-text">Система работает</span>
+            <div class="stats-row">
+                <div class="stat-chip">
+                    <span class="stat-icon">👥</span>
+                    <span class="stat-value" id="users-count">0</span>
+                    <span class="stat-label">пасажирів</span>
                 </div>
-                <div class="status-item">
-                    <span class="emoji">👥</span>
-                    <span id="users-count">0</span>
+                <div class="stat-chip">
+                    <span class="stat-icon">🎵</span>
+                    <span class="stat-value" id="songs-count">0</span>
+                    <span class="stat-label">в черзі</span>
                 </div>
-                <div class="status-item">
-                    <span class="emoji">🎵</span>
-                    <span id="songs-count">0</span>
-                </div>
-                <button id="toggle-accepting" class="toggle-btn">
-                    ВЫКЛЮЧИТЬ ПРИЕМ
+                <button id="toggle-accepting" class="toggle-chip accepting">
+                    <span class="toggle-dot"></span>
+                    <span class="toggle-text">Прийом увімк.</span>
                 </button>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main>
-            <!-- Now Playing Section -->
-            <section class="now-playing glass-panel glow">
-                <h2>СЕЙЧАС ИГРАЕТ</h2>
-                <div class="player-content" id="now-playing-content">
-                    <div class="cover-placeholder animate-pulse"></div>
-                    <div class="track-info">
-                        <h3 class="title placeholder-text w-3/4"></h3>
-                        <p class="artist placeholder-text w-1/2"></p>
+        <!-- Player Section -->
+        <section class="player-section glass-panel">
+            <!-- YouTube Player (hidden until started) -->
+            <div id="youtube-player-wrapper" class="yt-wrapper hidden">
+                <div id="youtube-player"></div>
+            </div>
+
+            <!-- Start Playback Overlay -->
+            <div id="start-overlay" class="start-overlay">
+                <div class="start-overlay-content">
+                    <div class="pulse-ring">
+                        <div class="play-circle">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="start-text">Натисніть, щоб увімкнути музику</p>
+                </div>
+            </div>
+
+            <!-- Track Info -->
+            <div class="track-display" id="track-display">
+                <div class="track-cover-wrap">
+                    <img id="track-cover" class="track-cover" src="" alt="">
+                    <div id="track-cover-placeholder" class="track-cover placeholder">
+                        <span>🎵</span>
                     </div>
                 </div>
-                <div class="controls">
-                    <button class="btn btn-primary" id="btn-next">
-                        <span class="emoji">⏭️</span> СЛЕДУЮЩАЯ
-                    </button>
+                <div class="track-meta">
+                    <h2 class="track-title" id="track-title">Очікування...</h2>
+                    <p class="track-artist" id="track-artist">Додайте пісню через бота</p>
                 </div>
-            </section>
+            </div>
 
-            <!-- Queue Section -->
-            <section class="queue-section glass-panel">
-                <div class="queue-header">
-                    <h2>ОЧЕРЕДЬ</h2>
-                    <button class="btn btn-danger btn-sm" id="btn-clear">ОЧИСТИТЬ</button>
+            <!-- Controls -->
+            <div class="player-controls">
+                <button class="ctrl-btn" id="btn-next" title="Наступна">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                    </svg>
+                    <span>Наступна</span>
+                </button>
+                <button class="ctrl-btn ctrl-danger" id="btn-clear" title="Очистити">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                    <span>Очистити</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Queue Section -->
+        <section class="queue-section glass-panel">
+            <div class="queue-header">
+                <h2>Черга</h2>
+                <span class="queue-count" id="queue-count">0 треків</span>
+            </div>
+            <div class="queue-list" id="queue-list">
+                <div class="empty-state">
+                    <span class="empty-icon">🎶</span>
+                    <p>Черга порожня</p>
+                    <p class="empty-sub">Пасажири можуть додати пісні через Telegram-бота</p>
                 </div>
-                <div class="queue-list" id="queue-list">
-                    <!-- Queue items injected here via JS -->
-                    <p class="empty-state">Очередь пуста</p>
-                </div>
-            </section>
-        </main>
+            </div>
+        </section>
+
+        <!-- Wake Lock toggle -->
+        <div class="wake-lock-row">
+            <label class="wake-lock-label">
+                <input type="checkbox" id="wake-lock-toggle" checked>
+                <span class="wake-lock-text">🔒 Не вимикати екран</span>
+            </label>
+        </div>
     </div>
 
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>

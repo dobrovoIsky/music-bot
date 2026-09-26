@@ -1,117 +1,229 @@
-const elements = {
-    systemStatus: document.getElementById('system-status'),
-    statusText: document.getElementById('status-text'),
-    usersCount: document.getElementById('users-count'),
-    songsCount: document.getElementById('songs-count'),
-    toggleAcceptingBtn: document.getElementById('toggle-accepting'),
-    nowPlayingContent: document.getElementById('now-playing-content'),
-    queueList: document.getElementById('queue-list'),
-    btnNext: document.getElementById('btn-next'),
-    btnClear: document.getElementById('btn-clear')
+// ====== DOM Elements ======
+const $ = id => document.getElementById(id);
+
+const els = {
+    statusBadge: $('status-badge'),
+    statusText: $('status-text'),
+    usersCount: $('users-count'),
+    songsCount: $('songs-count'),
+    toggleBtn: $('toggle-accepting'),
+    trackDisplay: $('track-display'),
+    trackTitle: $('track-title'),
+    trackArtist: $('track-artist'),
+    trackCover: $('track-cover'),
+    trackCoverPlaceholder: $('track-cover-placeholder'),
+    queueList: $('queue-list'),
+    queueCount: $('queue-count'),
+    btnNext: $('btn-next'),
+    btnClear: $('btn-clear'),
+    startOverlay: $('start-overlay'),
+    ytWrapper: $('youtube-player-wrapper'),
+    wakeLockToggle: $('wake-lock-toggle')
 };
 
-let lastQueueData = null;
+// ====== State ======
+let lastData = null;
+let currentYTId = null;
+let player = null;
+let isPlayerReady = false;
+let playbackStarted = false;
+let wakeLock = null;
 
-// Fetch queue and update UI
-async function fetchQueue() {
+// ====== Wake Lock (keep screen on) ======
+async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
     try {
-        const res = await fetch('/api/queue');
-        if (!res.ok) throw new Error('API Error');
-        const data = await res.json();
-        
-        // Prevent unnecessary DOM updates if data hasn't changed (basic stringify check)
-        const currentDataStr = JSON.stringify(data);
-        if (currentDataStr !== lastQueueData) {
-            updateUI(data);
-            lastQueueData = currentDataStr;
-        }
-        
-        elements.systemStatus.classList.remove('stopped');
-        elements.statusText.textContent = 'Система работает';
-    } catch (err) {
-        console.error('Failed to fetch queue:', err);
-        elements.systemStatus.classList.add('stopped');
-        elements.statusText.textContent = 'Ошибка подключения';
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (e) { /* silently fail */ }
+}
+
+async function releaseWakeLock() {
+    if (wakeLock) {
+        await wakeLock.release();
+        wakeLock = null;
     }
 }
 
+els.wakeLockToggle.addEventListener('change', (e) => {
+    if (e.target.checked) requestWakeLock();
+    else releaseWakeLock();
+});
+
+// Request on load
+requestWakeLock();
+
+// Re-request on visibility change (wake lock gets released when tab is hidden)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && els.wakeLockToggle.checked) {
+        requestWakeLock();
+    }
+});
+
+// ====== YouTube Player ======
+window.onYouTubeIframeAPIReady = function() {
+    player = new YT.Player('youtube-player', {
+        height: '100%',
+        width: '100%',
+        playerVars: {
+            autoplay: 0,
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1
+        },
+        events: {
+            onReady: () => { isPlayerReady = true; },
+            onStateChange: onPlayerStateChange
+        }
+    });
+};
+
+function onPlayerStateChange(event) {
+    // YT.PlayerState.ENDED === 0
+    if (event.data === 0 && playbackStarted) {
+        // Song ended, auto-skip to next
+        apiCall('/api/next');
+    }
+}
+
+// ====== Start Playback ======
+els.startOverlay.addEventListener('click', async () => {
+    playbackStarted = true;
+    els.startOverlay.classList.add('hidden');
+    els.ytWrapper.classList.remove('hidden');
+
+    // Trigger first song to play
+    await apiCall('/api/next');
+    // Fetch immediately to get the new PLAYING state
+    await fetchQueue();
+});
+
+// ====== API ======
+async function apiCall(endpoint) {
+    try {
+        const res = await fetch(endpoint, { method: 'POST' });
+        if (res.ok) await fetchQueue();
+    } catch (e) {
+        console.error('API Error:', e);
+    }
+}
+
+async function fetchQueue() {
+    try {
+        const res = await fetch('/api/queue');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        
+        const str = JSON.stringify(data);
+        if (str !== lastData) {
+            updateUI(data);
+            lastData = str;
+        }
+
+        els.statusBadge.classList.remove('offline');
+        els.statusText.textContent = 'Онлайн';
+    } catch (e) {
+        els.statusBadge.classList.add('offline');
+        els.statusText.textContent = 'Офлайн';
+    }
+}
+
+// ====== UI Update ======
 function updateUI(data) {
     // Stats
-    elements.usersCount.textContent = data.total_users;
-    elements.songsCount.textContent = data.total_songs;
-    
-    // Toggle Button
+    els.usersCount.textContent = data.total_users;
+    els.songsCount.textContent = data.total_songs;
+
+    // Toggle accepting
+    const toggleText = els.toggleBtn.querySelector('.toggle-text');
     if (data.accepting) {
-        elements.toggleAcceptingBtn.classList.remove('off');
-        elements.toggleAcceptingBtn.textContent = 'ВЫКЛЮЧИТЬ ПРИЕМ';
+        els.toggleBtn.classList.remove('paused');
+        els.toggleBtn.classList.add('accepting');
+        toggleText.textContent = 'Прийом увімк.';
     } else {
-        elements.toggleAcceptingBtn.classList.add('off');
-        elements.toggleAcceptingBtn.textContent = 'ВКЛЮЧИТЬ ПРИЕМ';
+        els.toggleBtn.classList.remove('accepting');
+        els.toggleBtn.classList.add('paused');
+        toggleText.textContent = 'Прийом вимк.';
     }
-    
+
     // Now Playing
     if (data.playing) {
-        const cover = data.playing.song.cover_url 
-            ? `<img src="${data.playing.song.cover_url.replace('100x100', '300x300')}" class="cover-art" alt="cover">`
-            : `<div class="cover-placeholder"></div>`;
-            
-        elements.nowPlayingContent.innerHTML = `
-            ${cover}
-            <div class="track-info">
-                <h3 class="title">${data.playing.song.title}</h3>
-                <p class="artist">${data.playing.song.artist}</p>
-            </div>
-        `;
+        const s = data.playing.song;
+        els.trackTitle.textContent = s.title;
+        els.trackArtist.textContent = s.artist;
+
+        if (s.cover_url) {
+            els.trackCover.src = s.cover_url;
+            els.trackCover.classList.remove('hidden');
+            els.trackCoverPlaceholder.classList.add('hidden');
+        } else {
+            els.trackCover.classList.add('hidden');
+            els.trackCoverPlaceholder.classList.remove('hidden');
+        }
+
+        // Play in YouTube if new song
+        if (s.youtube_id && s.youtube_id !== currentYTId) {
+            currentYTId = s.youtube_id;
+            if (isPlayerReady && playbackStarted) {
+                player.loadVideoById(s.youtube_id);
+            }
+        }
     } else {
-        elements.nowPlayingContent.innerHTML = `
-            <div class="cover-placeholder"></div>
-            <div class="track-info">
-                <h3 class="title">Ничего не играет</h3>
-                <p class="artist">Очередь пуста</p>
-            </div>
-        `;
+        els.trackTitle.textContent = 'Очікування...';
+        els.trackArtist.textContent = 'Додайте пісню через бота';
+        els.trackCover.classList.add('hidden');
+        els.trackCoverPlaceholder.classList.remove('hidden');
+        
+        if (currentYTId) {
+            currentYTId = null;
+            if (isPlayerReady && playbackStarted) {
+                player.stopVideo();
+            }
+        }
     }
-    
-    // Queue List
-    if (data.queue && data.queue.length > 0) {
-        elements.queueList.innerHTML = data.queue.map((item, index) => {
-            const cover = item.song.cover_url 
-                ? `<img src="${item.song.cover_url}" class="queue-track-cover" alt="cover">`
-                : `<div class="queue-track-cover" style="background: rgba(255,255,255,0.1)"></div>`;
-                
+
+    // Queue
+    const queueItems = data.queue || [];
+    const countLabel = queueItems.length === 1 ? '1 трек' : `${queueItems.length} треків`;
+    els.queueCount.textContent = countLabel;
+
+    if (queueItems.length > 0) {
+        els.queueList.innerHTML = queueItems.map((item, i) => {
+            const cover = item.song.cover_url
+                ? `<img src="${item.song.cover_url}" class="queue-cover" alt="">`
+                : `<div class="queue-cover-placeholder"></div>`;
             return `
                 <div class="queue-item">
-                    <span class="queue-index">${index + 1}</span>
+                    <span class="queue-idx">${i + 1}</span>
                     ${cover}
-                    <div class="queue-track-info">
-                        <div class="queue-track-title">${item.song.title}</div>
-                        <div class="queue-track-artist">${item.song.artist}</div>
+                    <div class="queue-info">
+                        <div class="queue-title">${item.song.title}</div>
+                        <div class="queue-artist">${item.song.artist}</div>
                     </div>
                 </div>
             `;
         }).join('');
     } else {
-        elements.queueList.innerHTML = `<p class="empty-state">Очередь пуста</p>`;
+        els.queueList.innerHTML = `
+            <div class="empty-state">
+                <span class="empty-icon">🎶</span>
+                <p>Черга порожня</p>
+                <p class="empty-sub">Пасажири можуть додати пісні через Telegram-бота</p>
+            </div>
+        `;
     }
 }
 
-// Controls API
-async function apiCall(endpoint) {
-    try {
-        const res = await fetch(endpoint, { method: 'POST' });
-        if (res.ok) {
-            await fetchQueue(); // Immediate refresh
-        }
-    } catch (e) {
-        console.error(e);
-    }
-}
+// ====== Event Listeners ======
+els.btnNext.addEventListener('click', () => apiCall('/api/next'));
+els.btnClear.addEventListener('click', () => {
+    apiCall('/api/clear');
+    if (isPlayerReady && playbackStarted) player.stopVideo();
+    currentYTId = null;
+});
+els.toggleBtn.addEventListener('click', () => apiCall('/api/toggle_accepting'));
 
-// Event Listeners
-elements.btnNext.addEventListener('click', () => apiCall('/api/next'));
-elements.btnClear.addEventListener('click', () => apiCall('/api/clear'));
-elements.toggleAcceptingBtn.addEventListener('click', () => apiCall('/api/toggle_accepting'));
-
-// Poll every 3 seconds
+// ====== Polling ======
 setInterval(fetchQueue, 3000);
-fetchQueue(); // Initial fetch
+fetchQueue();
