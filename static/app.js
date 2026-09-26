@@ -21,6 +21,19 @@ const els = {
     wakeLockToggle: $('wake-lock-toggle')
 };
 
+// A normal YouTube URL opens the installed app when the device is configured for it.
+const openYouTube = document.createElement('a');
+openYouTube.className = 'ctrl-btn';
+openYouTube.textContent = '▶ Відкрити в YouTube';
+openYouTube.target = '_blank';
+openYouTube.rel = 'noopener noreferrer';
+openYouTube.style.textDecoration = 'none';
+openYouTube.style.display = 'none';
+document.querySelector('.player-controls').append(openYouTube);
+openYouTube.addEventListener('click', () => {
+    if (isPlayerReady && playbackStarted) player.pauseVideo();
+});
+
 // ====== State ======
 let lastData = null;
 let currentYTId = null;
@@ -182,6 +195,13 @@ function updateUI(data) {
     // Now Playing
     if (data.playing) {
         const s = data.playing.song;
+        if (/^[\w-]{11}$/.test(s.youtube_id || '')) {
+            openYouTube.href = `https://www.youtube.com/watch?v=${s.youtube_id}`;
+            openYouTube.style.display = '';
+        } else {
+            openYouTube.removeAttribute('href');
+            openYouTube.style.display = 'none';
+        }
         els.trackTitle.textContent = s.title;
         els.trackArtist.textContent = s.artist;
 
@@ -195,6 +215,8 @@ function updateUI(data) {
         }
 
     } else {
+        openYouTube.removeAttribute('href');
+        openYouTube.style.display = 'none';
         els.trackTitle.textContent = 'Очікування...';
         els.trackArtist.textContent = 'Додайте пісню через бота';
         els.trackCover.classList.add('hidden');
