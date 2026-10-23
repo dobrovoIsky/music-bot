@@ -221,7 +221,7 @@ async def add_to_queue(callback: CallbackQuery, state: FSMContext):
     owner_id = owner_chat_id()
     if owner_id:
         video_id = selected_song["youtube_id"]
-        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        youtube_url = f"https://music.youtube.com/watch?v={video_id}"
         notification = (
             "🎵 <b>Нова пісня в черзі</b>\n\n"
             f"{escape(selected_song['artist'])} — {escape(selected_song['title'])}\n"
@@ -234,7 +234,7 @@ async def add_to_queue(callback: CallbackQuery, state: FSMContext):
                 text=notification,
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="▶️ Відкрити в YouTube", url=youtube_url)]
+                    [InlineKeyboardButton(text="▶️ Відкрити в YouTube Music", url=youtube_url)]
                 ]),
             )
         except TelegramAPIError:

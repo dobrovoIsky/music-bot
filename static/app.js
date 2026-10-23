@@ -24,7 +24,7 @@ const els = {
 // A normal YouTube URL opens the installed app when the device is configured for it.
 const openYouTube = document.createElement('a');
 openYouTube.className = 'ctrl-btn';
-openYouTube.textContent = '▶ Відкрити в YouTube';
+openYouTube.textContent = '▶ Відкрити в YouTube Music';
 openYouTube.target = '_blank';
 openYouTube.rel = 'noopener noreferrer';
 openYouTube.style.textDecoration = 'none';
@@ -196,7 +196,7 @@ function updateUI(data) {
     if (data.playing) {
         const s = data.playing.song;
         if (/^[\w-]{11}$/.test(s.youtube_id || '')) {
-            openYouTube.href = `https://www.youtube.com/watch?v=${s.youtube_id}`;
+            openYouTube.href = `https://music.youtube.com/watch?v=${s.youtube_id}`;
             openYouTube.style.display = '';
         } else {
             openYouTube.removeAttribute('href');
